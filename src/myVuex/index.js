@@ -1,0 +1,63 @@
+let Vue;
+const install = (_Vue) => {
+  Vue = _Vue;
+  Vue.mixin({
+    // 实例初始化后立即同步调用，在数据检测和事件/watcher设置之前
+    beforeCreate () {
+      const { store } = this.$options;
+      if (store) {
+        this.$store = store;
+      } else { // 子组件在渲染的时候会获取父组件的$store(组件会从上到下进行渲染)
+        this.$store = this.$parent && this.$parent.$store;
+      }
+    }
+  });
+};
+
+// object iterate
+const forEach = (obj, cb) => {
+  Object.keys(obj).forEach((key) => {
+    cb(key, obj[key], obj);
+  });
+};
+
+class Store {
+  constructor (options) {
+    const { state, mutations } = options;
+    // 执行Vue.use会执行install方法，会将全局的Vue赋值为Vue实例
+    // 保证state具有响应性
+    this._vm = new Vue({ // 这里为什么就让state可以在另一个实例中拥有响应性？
+      data: { state }
+    });
+    this.mutations = {};
+    forEach(mutations, (key, mutation) => {
+      this.mutations[key] = (payload) => {
+        // this.state是不能被更改的
+        // 但是这里我们将this._vm.state的地址赋值给了参数state，
+        // 之后我们更改的是this._vm.state地址对应的堆内存，而该值是响应式的
+        mutation(this.state, payload);
+      };
+    });
+  }
+
+  get xxx () {
+    return this.mutations;
+  }
+
+  // 属性会被定义在实例的原型上
+  get state () {
+    return this._vm.state;
+  }
+
+  // 通过commit来修改state
+  commit (type, payload) {
+    const mutation = this.mutations[type];
+    if (mutation) {
+      mutation(payload);
+    }
+  }
+}
+
+const Vuex = { install, Store };
+
+export default Vuex;

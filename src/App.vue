@@ -1,13 +1,23 @@
 <template>
   <div id="app">
+    <h3>{{$store.state.age}}</h3>
+    <button @click="onAdd">add age</button>
   </div>
 </template>
 
 <script>
-
   export default {
     name: 'App',
-    components: {}
+    components: {},
+    mounted () {
+      console.log('$store', this.$store);
+    },
+    methods: {
+      onAdd () {
+        this.$store.commit('add', 1);
+        console.log('this.$store', this.$store);
+      }
+    }
   };
 </script>
 
