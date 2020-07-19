@@ -40,11 +40,9 @@ class Store {
     });
   }
 
-  get xxx () {
-    return this.mutations;
-  }
-
   // 属性会被定义在实例的原型上
+  // this.state = this._vm.state
+  // 每次都会获取到最新的this._vm.state
   get state () {
     return this._vm.state;
   }

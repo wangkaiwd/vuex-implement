@@ -9,13 +9,9 @@
   export default {
     name: 'App',
     components: {},
-    mounted () {
-      console.log('$store', this.$store);
-    },
     methods: {
       onAdd () {
         this.$store.commit('add', 1);
-        console.log('this.$store', this.$store);
       }
     }
   };
