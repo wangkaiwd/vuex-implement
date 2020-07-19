@@ -23,7 +23,7 @@ const forEach = (obj, cb) => {
 
 class Store {
   constructor (options) {
-    const { state, mutations } = options;
+    const { state, mutations, actions } = options;
     // 执行Vue.use会执行install方法，会将全局的Vue赋值为Vue实例
     // 保证state具有响应性
     this._vm = new Vue({ // 这里为什么就让state可以在另一个实例中拥有响应性？
@@ -38,6 +38,19 @@ class Store {
         mutation(this.state, payload);
       };
     });
+    this.actions = {};
+    forEach(actions, (key, action) => {
+      this.actions[key] = (payload) => {
+        // action中的第一个参数为Store的实例，可以通过commit来更改state
+        // 也可以通过dispatch来派发另一个action
+        action(this, payload);
+      };
+    });
+    // 通过bind返回一个函数赋值为this.commit，该函数内部会通过call执行this.commit，
+    // 并且会将返回函数的参数也传入this.commit
+    // 等号右边 => Store.prototype.commit 原型方法
+    // 等到左边 => store.commit 实例私有方法
+    // this.commit = this.commit.bind(this);
   }
 
   // 属性会被定义在实例的原型上
@@ -48,10 +61,17 @@ class Store {
   }
 
   // 通过commit来修改state
-  commit (type, payload) {
+  commit = (type, payload) => {
     const mutation = this.mutations[type];
     if (mutation) {
       mutation(payload);
+    }
+  };
+
+  dispatch (type, payload) {
+    const action = this.actions[type];
+    if (action) {
+      action(payload);
     }
   }
 }

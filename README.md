@@ -97,7 +97,19 @@ const install = (Vue) => {
   };
 </script>
 ```
+```javascript
+// store/index.js
+export default new Vuex.Store({
+  // ...
+  mutations: {
+    add (state, payload) {
+      state.age = state.age + payload;
+    }
+  }
+  // ...
+});
 
+```
 为了方便遍历对象，我们可以实现一个`forEach`方法：
 ```javascript
 // object iterate
@@ -141,6 +153,88 @@ class Store {
     const mutation = this.mutations[type];
     if (mutation) {
       mutation(payload);
+    }
+  }
+}
+```
+
+在`Vuex`中，异步更新`state`需要通过`dispatch`方法派发一个`action`，然后通过`action`通过`commit`来修改`state`：
+```vue
+<template>
+  <div id="app">
+    <h3>{{$store.state.age}}</h3>
+    <button @click="onAsyncAdd"> async add age</button>
+  </div>
+</template>
+
+<script>
+  export default {
+    name: 'App',
+    components: {},
+    methods: {
+      onAsyncAdd () {
+        this.$store.dispatch('asyncAdd', 1);
+      }
+    }
+  };
+</script>
+```
+```javascript
+export default new Vuex.Store({
+  // ...
+  mutations: {
+    add (state, payload) {
+      state.age = state.age + payload;
+    }
+  },
+  actions: {
+    // const { commit } = store;
+    // this指向不一样
+    // commit()
+    // store.commit()
+    asyncAdd ({ commit }, payload) {
+      // 这里调用commit时，如果不提前指定this的话，this会指向undefined
+      setTimeout(() => {
+        commit('add', payload);
+      }, 2000);
+    }
+  },
+  // ...
+});
+```
+
+`Vuex`中`actions`的实现与`mutations`类似，不过在`mutation`中解构出`commit`方法执行时需要我们指定`this`指向：
+```javascript
+class Store {
+  constructor (options) {
+    // ...
+    this.actions = {};
+    forEach(actions, (key, action) => {
+      this.actions[key] = (payload) => {
+        // action中的第一个参数为Store的实例，可以通过commit来更改state
+        // 也可以通过dispatch来派发另一个action
+        action(this, payload);
+      };
+    });
+    // 通过bind返回一个函数赋值为this.commit，该函数内部会通过call执行this.commit，
+    // 并且会将返回函数的参数也传入this.commit
+    // 等号右边 => Store.prototype.commit 原型方法
+    // 等到左边 => store.commit 实例私有方法
+    // this.commit = this.commit.bind(this);
+  }
+
+  // 通过commit来修改state
+  commit = (type, payload) => {
+    const mutation = this.mutations[type];
+    if (mutation) {
+      mutation(payload);
+    }
+  };
+
+  dispatch (type, payload) {
+    const action = this.actions[type];
+    if (action) {
+      action(payload);
     }
   }
 }

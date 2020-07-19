@@ -2,6 +2,7 @@
   <div id="app">
     <h3>{{$store.state.age}}</h3>
     <button @click="onAdd">add age</button>
+    <button @click="onAsyncAdd"> async add age</button>
   </div>
 </template>
 
@@ -12,6 +13,9 @@
     methods: {
       onAdd () {
         this.$store.commit('add', 1);
+      },
+      onAsyncAdd () {
+        this.$store.dispatch('asyncAdd', 1);
       }
     }
   };
