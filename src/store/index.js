@@ -5,12 +5,27 @@ Vue.use(Vuex);
 
 export default new Vuex.Store({
   state: {
-    age: 10
+    age: 10,
+    person: {
+      profile: {
+        job: 'developer',
+        company: 'alipay',
+        name: 'zs'
+      },
+    }
+  },
+  getters: {
+    personalInfo (state) { // 获取个人信息
+      const { profile } = state.person;
+      return Object.keys(profile).reduce((prev, cur) => {
+        return prev + `${cur}: ${profile[cur]}; `;
+      }, '');
+    }
   },
   mutations: {
     add (state, payload) {
       state.age = state.age + payload;
-    }
+    },
   },
   actions: {
     // const { commit } = store;

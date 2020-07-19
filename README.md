@@ -239,3 +239,31 @@ class Store {
   }
 }
 ```
+
+这里我们已经实现了`state`,`mutations`,`actions`，而有时候我们的`state`中的属性过于冗长、或需要计算出一些值，就需要用到`getters`：
+```vue
+
+```
+```javascript
+export default new Vuex.Store({
+  state: {
+    age: 10,
+    person: {
+      profile: {
+        job: 'developer',
+        company: 'alipay',
+        name: 'zs'
+      },
+    }
+  },
+  getters: {
+    personalInfo (state) { // 获取个人信息
+      const { profile } = state.person;
+      return Object.keys(profile).reduce((prev, cur) => {
+        return prev + `${cur}: ${profile[cur]}; `;
+      }, '');
+    }
+  }
+  // ...
+});
+```
