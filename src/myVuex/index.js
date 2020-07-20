@@ -20,6 +20,35 @@ const forEach = (obj, cb) => {
     cb(obj[key], key, obj);
   });
 };
+const installModule = (store, rootModule, current = rootModule) => {
+  store._mutations = store._mutations || {};
+  store._actions = store._actions || {};
+  store._state = store._state || {};
+  forEach(current, (module, key) => {
+    if (key === 'mutations') {
+      forEach(module, (mutation, key) => {
+        const entry = store._mutations[key] = store._mutations[key] || [];
+        entry.push((payload) => {
+          mutation(module.state, payload);
+        });
+      });
+    } else if (key === 'actions') {
+      forEach(module, (action, key) => {
+        const entry = store._actions[key] = store._actions[key] || [];
+        entry.push((payload) => {
+          action(store, payload);
+        });
+      });
+    } else if (key === 'state') { // 需要将不同module的state拼接到store.state上
+
+    }
+    if (key === 'modules') {
+      forEach(module, (current) => {
+        installModule(store, rootModule, current);
+      });
+    }
+  });
+};
 
 class Store {
   constructor (options) {
@@ -39,6 +68,8 @@ class Store {
         }
       });
     });
+    installModule(this, options);
+    console.log('store', this);
     this.mutations = {};
     forEach(mutations, (mutation, key) => {
       this.mutations[key] = (payload) => {
