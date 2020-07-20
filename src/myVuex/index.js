@@ -40,7 +40,20 @@ const installModule = (store, rootModule, current = rootModule) => {
         });
       });
     } else if (key === 'state') { // 需要将不同module的state拼接到store.state上
-
+      // {
+      //    state: {name: 'root'},
+      //    modules: {
+      //      a: {
+      //        state: {
+      //          name: 'a'
+      //        },
+      //      }
+      //    }
+      // }
+      // {
+      //    state: { name: 'root', a:{ name: 'a' } }
+      // }
+      // store._state = module
     }
     if (key === 'modules') {
       forEach(module, (current) => {
