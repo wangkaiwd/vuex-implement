@@ -17,20 +17,30 @@ const install = (_Vue) => {
 // object iterate
 const forEach = (obj, cb) => {
   Object.keys(obj).forEach((key) => {
-    cb(key, obj[key], obj);
+    cb(obj[key], key, obj);
   });
 };
 
 class Store {
   constructor (options) {
-    const { state, mutations, actions } = options;
+    const { state, mutations, actions, getters } = options;
     // 执行Vue.use会执行install方法，会将全局的Vue赋值为Vue实例
     // 保证state具有响应性
     this._vm = new Vue({ // 这里为什么就让state可以在另一个实例中拥有响应性？
       data: { state }
     });
+    this.getters = {};
+    forEach(getters, (getter, key) => {
+      // 每次取值时都会调用get方法
+      // 而computed方法只会在
+      Object.defineProperty(this.getters, key, {
+        get: () => {
+          return getter(this.state);
+        }
+      });
+    });
     this.mutations = {};
-    forEach(mutations, (key, mutation) => {
+    forEach(mutations, (mutation, key) => {
       this.mutations[key] = (payload) => {
         // this.state是不能被更改的
         // 但是这里我们将this._vm.state的地址赋值给了参数state，
@@ -39,7 +49,7 @@ class Store {
       };
     });
     this.actions = {};
-    forEach(actions, (key, action) => {
+    forEach(actions, (action, key) => {
       this.actions[key] = (payload) => {
         // action中的第一个参数为Store的实例，可以通过commit来更改state
         // 也可以通过dispatch来派发另一个action
