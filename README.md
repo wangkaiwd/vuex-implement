@@ -82,9 +82,13 @@ const install = (Vue) => {
   });
 };
 ```
+
+### 响应式的`state`
 这样我们便能在所有的注入`store`配置的根组件及其所有子组件中使用`$store`
 
-直接为`Vue`的实例添加属性，该属性值是不具备响应性的。所以此时`state`虽然可以获取到，但是由于并没有提前在`data`中定义，所以并不是响应式的，即在`state`发生变化时，视图并不会随之更新。为了让`state`成为响应式，我们在`Vuex`内部创建了一个新的`Vue`实例，并将`state`作为实例的`data`中的属性，保持其响应性
+**直接为`Vue`的实例添加属性，该属性值是不具备响应性的。**
+
+此时`state`虽然可以获取到，但是由于并没有提前在`data`中定义，所以并不是响应式的，即在`state`发生变化时，视图并不会随之更新。为了让`state`成为响应式，我们在`Vuex`内部创建了一个新的`Vue`实例，并将`state`作为实例的`data`中的属性，保持其响应性
 ```javascript
 class Store {
   constructor (options) {
@@ -104,8 +108,9 @@ class Store {
   }
 }
 ```
+`Vuex`与全局变量一个最大的局别在于：**`Vuex`中`store`的`state`是响应式的，在`state`发生变化时可以保证视图有效更新**
 
-### 响应式的`state`
+### `mutation`同步更改`state`
 接下来我们尝试更改`store.state.age`的值。
 
 在`Vuex`中，我们不能直接修改`store.state`的值，而是必须要通过`commit`一个`mutation`，然后通过`mutation`来修改`state`。用法如下：
@@ -189,7 +194,7 @@ class Store {
   }
 }
 ```
-
+### `action`处理异步任务
 在`Vuex`中，异步更新`state`需要通过`dispatch`方法派发一个`action`，然后通过`action`通过`commit`来修改`state`：
 ```vue
 <template>
@@ -272,6 +277,7 @@ class Store {
 }
 ```
 
+### `Vuex`中的`getters`
 这里我们已经实现了`state`,`mutations`,`actions`，而有时候我们的`state`中的属性过于冗长、或需要计算出一些值，就需要用到`getters`：
 ```vue
 <template>

@@ -39,5 +39,51 @@ export default new Vuex.Store({
       }, 2000);
     }
   },
-  modules: {}
+  modules: {
+    a: {
+      state: {
+        name: 'name-a',
+        person: {
+          gender: 'man'
+        }
+      },
+      mutations: {
+        addA (state, payload) {
+
+        }
+      },
+      getters: {
+        nameA (state) {
+          return state.person.gender;
+        }
+      },
+      modules: {
+        a1: {
+          state: {
+            name: 'name-a1'
+          },
+          modules: {
+            a11: {
+              state: {
+                name: 'name-a11'
+              }
+            }
+          }
+        }
+      }
+    },
+    b: {
+      state: {
+        name: 'name-b',
+        person: {
+          hobby: 'game',
+        }
+      },
+      mutations: {
+        nameB (state) {
+
+        }
+      }
+    }
+  }
 });
