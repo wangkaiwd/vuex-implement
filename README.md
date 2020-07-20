@@ -1,3 +1,5 @@
+## 从零到一实现`Vuex`
+
 ### `Vuex`使用
 > [`official documentation`](https://vuex.vuejs.org/)
 
@@ -29,8 +31,14 @@ new Vue({
 }
 ```
 
-### `Vuex`基础实现
-通过`Vue.use`方法调用`Vuex`，说明`Vuex`会暴露出一个函数或带有`install`方法的`object`。而之后我们通过`new Vuex.Store`来构建`store`实例，所以`Vuex`会导出一个拥有`install`方法以及`Store`类的`object`。代码如下：
+### `Vuex`的`install`方法
+`Vuex`的使用方式：
+1. 引入`Vuex`
+2. `Vue.use(Vuex)`
+3. `new Vuex.Store`创建`Vuex`中`Store`的实例
+4. 在`Vue`根实例中作为配置项注入
+
+[`Vue.use`](https://vuejs.org/v2/api/#Vue-use) 方法的参数要求时一个函数或者具有`install`方法的对象，由上述的使用步骤`1~3`可以得出，`Vuex`会默认导出一个具有`install`方法以及`Store`类的对象，代码如下：
 ```javascript
 // myVuex/index.js
 const install = (Vue) => {
@@ -48,7 +56,7 @@ const Vuex = { install, Store };
 export default Vuex;
 ```
 
-之后，我们将`store`注入到了`Vue`的根实例的选项中，组件中便可以这样使用：
+步骤4中，我们将`store`注入到了`Vue`的根实例的选项中，组件中便可以这样使用：
 ```vue
 // App.vue
 <template>
@@ -58,7 +66,7 @@ export default Vuex;
 </template>
 ```
 
-为了能让`Vue`的所有子组件都能通过`$store`来访问到`store`，进而方便的获取`store`的属性和方法，`Vuex`采用`Vue.mixin`将`store`在`beforeCreate`钩子中进行混入：
+为了能让`Vue`的所有子组件都能通过`$store`来访问到`store`，进而方便的获取`store`的属性和方法，`Vuex`采用`Vue.mixin`将`store`在`beforeCreate`钩子中进行全局混入：
 ```javascript
 const install = (Vue) => {
   Vue.mixin({
@@ -74,9 +82,33 @@ const install = (Vue) => {
   });
 };
 ```
+这样我们便能在所有的注入`store`配置的根组件及其所有子组件中使用`$store`
+
+直接为`Vue`的实例添加属性，该属性值是不具备响应性的。所以此时`state`虽然可以获取到，但是由于并没有提前在`data`中定义，所以并不是响应式的，即在`state`发生变化时，视图并不会随之更新。为了让`state`成为响应式，我们在`Vuex`内部创建了一个新的`Vue`实例，并将`state`作为实例的`data`中的属性，保持其响应性
+```javascript
+class Store {
+  constructor (options) {
+    const { state} = options;
+    // 执行Vue.use会执行install方法，会将全局的Vue赋值为Vue实例
+    // 保证state具有响应性
+    this._vm = new Vue({ // 这里为什么就让state可以在另一个实例中拥有响应性？
+      data: { state }
+    });
+  }
+
+  // 属性会被定义在实例的原型上
+  // this.state = this._vm.state
+  // 每次都会获取到最新的this._vm.state
+  get state () {
+    return this._vm.state;
+  }
+}
+```
+
+### 响应式的`state`
 接下来我们尝试更改`store.state.age`的值。
 
-在`Vuex`中，我们不能直接修改`store.state`的值，而是必须要通过`commit`一个`mutations`，然后通过`mutations`来修改`state`。用法如下：
+在`Vuex`中，我们不能直接修改`store.state`的值，而是必须要通过`commit`一个`mutation`，然后通过`mutation`来修改`state`。用法如下：
 ```vue
 <template>
   <div id="app">
@@ -242,7 +274,11 @@ class Store {
 
 这里我们已经实现了`state`,`mutations`,`actions`，而有时候我们的`state`中的属性过于冗长、或需要计算出一些值，就需要用到`getters`：
 ```vue
-
+<template>
+  <div id="app">
+    <h2>{{$store.getters.personalInfo}}</h2>
+  </div>
+</template>
 ```
 ```javascript
 export default new Vuex.Store({
