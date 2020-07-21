@@ -1,13 +1,24 @@
 <template>
   <div id="app">
-    {{$store.state.age}}
+    <h3>{{$store.state.age}}</h3>
+    <button @click="onAdd">add age</button>
+    <button @click="onAsyncAdd"> async add age</button>
+    <h2>{{$store.getters.personalInfo}}</h2>
   </div>
 </template>
 
 <script>
   export default {
     name: 'App',
-    components: {}
+    components: {},
+    methods: {
+      onAdd () {
+        this.$store.commit('add', 1);
+      },
+      onAsyncAdd () {
+        this.$store.dispatch('asyncAdd', 1);
+      }
+    }
   };
 </script>
 
