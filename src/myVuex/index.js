@@ -21,26 +21,22 @@ const forEach = (obj, cb) => {
     cb(obj[key], key, obj);
   });
 };
-const installModule = (store, rootModule, current = rootModule, path = []) => {
-  store._mutations = store._mutations || {};
-  store._actions = store._actions || {};
-  store._state = store._state || {};
-  store._getters = store._getters || {};
+const installModule = (store, rootState, current, path = []) => {
   // 遍历current没有意义，还是需要再次判断各个属性来进行不同的操作
   forEach(current.mutations, (mutation, key) => {
-    const entry = store._mutations[key] = store._mutations[key] || [];
+    const entry = store.mutations[key] = store.mutations[key] || [];
     entry.push((payload) => {
       mutation(current.state, payload);
     });
   });
   forEach(current.actions, (action, key) => {
-    const entry = store._actions[key] = store._actions[key] || [];
+    const entry = store.actions[key] = store.actions[key] || [];
     entry.push((payload) => {
       action(store, payload);
     });
   });
   forEach(current.getters, (getter, key) => {
-    Object.defineProperty(store._getters, key, {
+    Object.defineProperty(store.getters, key, {
       get: () => {
         return getter(current.state);
       }
@@ -52,7 +48,7 @@ const installModule = (store, rootModule, current = rootModule, path = []) => {
   // path = [a]  store.state.a = state
   // path = [a, a1] store.state.a.a1 = state
   if (path.length === 0) {
-    store._state = current.state;
+    rootState = current.state;
   } else {
     // 根模块
     // 处理对象：
@@ -70,12 +66,12 @@ const installModule = (store, rootModule, current = rootModule, path = []) => {
     // 然后通过所有父级的索引拼接当前数组的索引可以找到对应的元素
     const parent = path.slice(0, -1).reduce((prev, cur) => {
       return prev[cur];
-    }, store._state);
+    }, rootState);
     const latestKey = path[path.length - 1];
     parent[latestKey] = current.state;
   }
   forEach(current.modules, (module, key) => {
-    installModule(store, rootModule, module, path.concat(key));
+    installModule(store, rootState, module, path.concat(key));
   });
 };
 
@@ -87,35 +83,44 @@ class Store {
     this._vm = new Vue({ // 这里为什么就让state可以在另一个实例中拥有响应性？
       data: { state }
     });
-    this.getters = {};
-    forEach(getters, (getter, key) => {
-      // 每次取值时都会调用get方法
-      // 而computed方法只会在
-      Object.defineProperty(this.getters, key, {
-        get: () => {
-          return getter(this.state);
-        }
-      });
-    });
-    installModule(this, options);
-    console.log('store', this);
     this.mutations = {};
-    forEach(mutations, (mutation, key) => {
-      this.mutations[key] = (payload) => {
-        // this.state是不能被更改的
-        // 但是这里我们将this._vm.state的地址赋值给了参数state，
-        // 之后我们更改的是this._vm.state地址对应的堆内存，而该值是响应式的
-        mutation(this.state, payload);
-      };
-    });
     this.actions = {};
-    forEach(actions, (action, key) => {
-      this.actions[key] = (payload) => {
-        // action中的第一个参数为Store的实例，可以通过commit来更改state
-        // 也可以通过dispatch来派发另一个action
-        action(this, payload);
-      };
-    });
+    this.getters = {};
+    // 注意： 由于 get state() {...}
+    // 所以不能直接修改this.state,
+    // 这里将this.state作为参数传入函数，会进行形参赋值，
+    // 将this.state返回的this._vm.state的地址赋值给rootState，
+    // 而之后更改rootState会更改其与this_vm.state共享的堆内存，
+    // 最终通过this.state获取到最新的state的值
+    installModule(this, this.state, options);
+    // this.getters = {};
+    // forEach(getters, (getter, key) => {
+    //   // 每次取值时都会调用get方法
+    //   // 而computed方法只会在
+    //   Object.defineProperty(this.getters, key, {
+    //     get: () => {
+    //       return getter(this.state);
+    //     }
+    //   });
+    // });
+    // console.log('store', this);
+    // this.mutations = {};
+    // forEach(mutations, (mutation, key) => {
+    //   this.mutations[key] = (payload) => {
+    //     // this.state是不能被更改的
+    //     // 但是这里我们将this._vm.state的地址赋值给了参数state，
+    //     // 之后我们更改的是this._vm.state地址对应的堆内存，而该值是响应式的
+    //     mutation(this.state, payload);
+    //   };
+    // });
+    // this.actions = {};
+    // forEach(actions, (action, key) => {
+    //   this.actions[key] = (payload) => {
+    //     // action中的第一个参数为Store的实例，可以通过commit来更改state
+    //     // 也可以通过dispatch来派发另一个action
+    //     action(this, payload);
+    //   };
+    // });
     // 通过bind返回一个函数赋值为this.commit，该函数内部会通过call执行this.commit，
     // 并且会将返回函数的参数也传入this.commit
     // 等号右边 => Store.prototype.commit 原型方法
@@ -132,16 +137,16 @@ class Store {
 
   // 通过commit来修改state
   commit = (type, payload) => {
-    const mutation = this.mutations[type];
-    if (mutation) {
-      mutation(payload);
+    const entries = this.mutations[type];
+    if (entries) {
+      entries.forEach(fn => fn(payload));
     }
   };
 
   dispatch (type, payload) {
-    const action = this.actions[type];
-    if (action) {
-      action(payload);
+    const entries = this.actions[type];
+    if (entries) {
+      entries.forEach(fn => fn(payload));
     }
   }
 }
