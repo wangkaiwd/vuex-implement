@@ -1,4 +1,4 @@
-## 从零到一实现`Vuex`
+## 从零到一实现简易`Vuex`
 
 ### `Vuex`使用
 > [`official documentation`](https://vuex.vuejs.org/)
