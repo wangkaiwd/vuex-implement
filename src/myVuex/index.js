@@ -16,6 +16,7 @@ const install = (_Vue) => {
 
 // object iterate
 const forEach = (obj, cb) => {
+  if (obj == null) return;
   Object.keys(obj).forEach((key) => {
     cb(obj[key], key, obj);
   });
@@ -24,42 +25,29 @@ const installModule = (store, rootModule, current = rootModule) => {
   store._mutations = store._mutations || {};
   store._actions = store._actions || {};
   store._state = store._state || {};
-  forEach(current, (module, key) => {
-    if (key === 'mutations') {
-      forEach(module, (mutation, key) => {
-        const entry = store._mutations[key] = store._mutations[key] || [];
-        entry.push((payload) => {
-          mutation(module.state, payload);
-        });
-      });
-    } else if (key === 'actions') {
-      forEach(module, (action, key) => {
-        const entry = store._actions[key] = store._actions[key] || [];
-        entry.push((payload) => {
-          action(store, payload);
-        });
-      });
-    } else if (key === 'state') { // 需要将不同module的state拼接到store.state上
-      // {
-      //    state: {name: 'root'},
-      //    modules: {
-      //      a: {
-      //        state: {
-      //          name: 'a'
-      //        },
-      //      }
-      //    }
-      // }
-      // {
-      //    state: { name: 'root', a:{ name: 'a' } }
-      // }
-      // store._state = module
-    }
-    if (key === 'modules') {
-      forEach(module, (current) => {
-        installModule(store, rootModule, current);
-      });
-    }
+  store._getters = store._getters || {};
+  // 遍历current没有意义，还是需要再次判断各个属性来进行不同的操作
+  forEach(current.mutations, (mutation, key) => {
+    const entry = store._mutations[key] = store._mutations[key] || [];
+    entry.push((payload) => {
+      mutation(current.state, payload);
+    });
+  });
+  forEach(current.actions, (action, key) => {
+    const entry = store._actions[key] = store._actions[key] || [];
+    entry.push((payload) => {
+      action(store, payload);
+    });
+  });
+  forEach(current.getters, (getter, key) => {
+    Object.defineProperty(store._getters, key, {
+      get: () => {
+        return getter(current.state);
+      }
+    });
+  });
+  forEach(current.modules, (module) => {
+    installModule(store, rootModule, module);
   });
 };
 
