@@ -21,7 +21,7 @@ const forEach = (obj, cb) => {
     cb(obj[key], key, obj);
   });
 };
-const installModule = (store, rootModule, current = rootModule) => {
+const installModule = (store, rootModule, current = rootModule, path = []) => {
   store._mutations = store._mutations || {};
   store._actions = store._actions || {};
   store._state = store._state || {};
@@ -46,8 +46,36 @@ const installModule = (store, rootModule, current = rootModule) => {
       }
     });
   });
-  forEach(current.modules, (module) => {
-    installModule(store, rootModule, module);
+  // {state: {a: 1}, modules: {x: {state: {b:2}}}}
+  // {state: {a:1, x: {b:2}}}
+  // 需要通过path来记录state所在module的key，然后拼到store的state上
+  // path = [a]  store.state.a = state
+  // path = [a, a1] store.state.a.a1 = state
+  if (path.length === 0) {
+    store._state = current.state;
+  } else {
+    // 根模块
+    // 处理对象：
+    // 将modules的key在每次递归时放入到数组中，
+    // 这样可以很方便的通过数组来找到当前遍历的内容在原对象的位置，
+    // 并且可以为新对象赋值
+    // 处理数组：
+    // var tree = [
+    //  {
+    //    state: '1',
+    //    children: [{state:'1-1'}] },
+    //    {state: '2', children: [{state: '2-2'}]}
+    // ]
+    // path: [0] path中记录的是父级数组对应的索引，当前数组对应的索引可以通过遍历时获得
+    // 然后通过所有父级的索引拼接当前数组的索引可以找到对应的元素
+    const parent = path.slice(0, -1).reduce((prev, cur) => {
+      return prev[cur];
+    }, store._state);
+    const latestKey = path[path.length - 1];
+    parent[latestKey] = current.state;
+  }
+  forEach(current.modules, (module, key) => {
+    installModule(store, rootModule, module, path.concat(key));
   });
 };
 
