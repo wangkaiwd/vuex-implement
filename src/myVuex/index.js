@@ -31,18 +31,25 @@ const installModule = (store, rootState, current, path = []) => {
     if (item.namespaced) {prefix = prefix + cur + '/';}
     return item;
   }, store.root);
-  registerMutations(store, current, prefix);
+  registerState(rootState, current, path);
+  registerMutations(store, current, prefix, path);
   registerActions(store, current, prefix);
   registerGetters(store, current);
-  registerState(rootState, current, path);
   registerChildren(store, rootState, current, path);
 };
 
-function registerMutations (store, module, prefix) {
+function registerMutations (store, module, prefix, path) {
+  // {state: {x: 1}, modules: {a: {state: {y:2}, modules: {b: {state: {z:3}}}} }}
+  // {state: {x: 1, a: {y:2}, b: {z:3}}}
+  // [a, b] store.state.a.b
+  // const state = path.reduce((prev, cur) => {
+  //   return prev[cur];
+  // }, store.state);
   forEach(module.mutations, (mutation, key) => {
     key = prefix + key;
     const entry = store.mutations[key] = store.mutations[key] || [];
     entry.push((payload) => {
+      // 这里module.state在registerState的时候将module.state赋值给this.state, 所以它们指向了同一片堆内存空间
       mutation(module.state, payload);
     });
   });
@@ -76,7 +83,8 @@ function registerState (rootState, module, path) {
       return prev[cur];
     }, rootState);
     const latestKey = path[path.length - 1];
-    parent[latestKey] = module.state;
+    // 新增属性不具有响应式
+    Vue.set(parent, latestKey, module.state);
   }
 }
 

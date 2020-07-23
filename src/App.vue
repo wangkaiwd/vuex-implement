@@ -1,8 +1,8 @@
 <template>
   <div id="app">
-    <h3>{{$store.state.age}}</h3>
-    <button @click="onAdd">add age</button>
-    <button @click="onAsyncAdd"> async add age</button>
+    <!--    <h3>{{$store.state.age}}</h3>-->
+    <!--    <button @click="onAdd">add age</button>-->
+    <!--    <button @click="onAsyncAdd"> async add age</button>-->
     <h2>{{$store.getters.personalInfo}}</h2>
     <h4>{{$store.state.a.age}}</h4>
     <button @click="onTestNamespaced">namespaced</button>
