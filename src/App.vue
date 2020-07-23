@@ -5,7 +5,9 @@
     <!--    <button @click="onAsyncAdd"> async add age</button>-->
     <h2>{{$store.getters.personalInfo}}</h2>
     <h4>{{$store.state.a.age}}</h4>
+    <h4>{{$store.state.a.a2.name}}</h4>
     <button @click="onTestNamespaced">namespaced</button>
+    <button @click="changeA2Name">update a2 name</button>
   </div>
 </template>
 
@@ -22,6 +24,9 @@
       },
       onTestNamespaced () {
         this.$store.commit('a/addA', 10);
+      },
+      changeA2Name () {
+        this.$store.commit('a/changeName');
       }
     }
   };

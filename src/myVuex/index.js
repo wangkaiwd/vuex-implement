@@ -28,7 +28,7 @@ const installModule = (store, rootState, current, path = []) => {
   let prefix = '';
   path.reduce((prev, cur) => {
     const item = prev.modules[cur];
-    if (item.namespaced) {prefix = prefix + cur + '/';}
+    if (item && item.namespaced) {prefix = prefix + cur + '/';}
     return item;
   }, store.root);
   registerState(rootState, current, path);
@@ -107,7 +107,6 @@ class Store {
     this.getters = {};
     this.root = options;
     installModule(this, this.state, options);
-    console.log(this);
   }
 
   // 属性会被定义在实例的原型上
@@ -130,6 +129,11 @@ class Store {
     if (entries) {
       entries.forEach(fn => fn(payload));
     }
+  }
+
+  registerModule (rawModule, path) {
+    installModule(this, this.state, rawModule, path);
+    console.log(this);
   }
 }
 
