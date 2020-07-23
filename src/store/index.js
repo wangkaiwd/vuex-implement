@@ -1,5 +1,6 @@
 import Vue from 'vue';
 import Vuex from '../myVuex';
+// import Vuex from 'vuex';
 
 Vue.use(Vuex);
 
@@ -41,15 +42,18 @@ export default new Vuex.Store({
   },
   modules: {
     a: {
+      namespaced: true,
       state: {
         name: 'name-a',
+        age: 10,
         person: {
           gender: 'man'
         }
       },
       mutations: {
         addA (state, payload) {
-
+          console.log('add a');
+          state.age = state.age + payload;
         }
       },
       getters: {

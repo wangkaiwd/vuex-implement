@@ -4,6 +4,8 @@
     <button @click="onAdd">add age</button>
     <button @click="onAsyncAdd"> async add age</button>
     <h2>{{$store.getters.personalInfo}}</h2>
+    <h4>{{$store.state.a.age}}</h4>
+    <button @click="onTestNamespaced">namespaced</button>
   </div>
 </template>
 
@@ -17,6 +19,9 @@
       },
       onAsyncAdd () {
         this.$store.dispatch('asyncAdd', 1);
+      },
+      onTestNamespaced () {
+        this.$store.commit('a/addA', 10);
       }
     }
   };

@@ -22,15 +22,25 @@ const forEach = (obj, cb) => {
   });
 };
 const installModule = (store, rootState, current, path = []) => {
-  registerMutations(store, current);
-  registerActions(store, current);
+  // { state: {}, modules: { a: { namespaced: true, modules: {a1: {namespaced: true}}} }}
+  // path: [a, a1] store.modules.a.modules.a1
+  // a/a1/
+  let prefix = '';
+  path.reduce((prev, cur) => {
+    const item = prev.modules[cur];
+    if (item.namespaced) {prefix = prefix + cur + '/';}
+    return item;
+  }, store.root);
+  registerMutations(store, current, prefix);
+  registerActions(store, current, prefix);
   registerGetters(store, current);
   registerState(rootState, current, path);
   registerChildren(store, rootState, current, path);
 };
 
-function registerMutations (store, module) {
+function registerMutations (store, module, prefix) {
   forEach(module.mutations, (mutation, key) => {
+    key = prefix + key;
     const entry = store.mutations[key] = store.mutations[key] || [];
     entry.push((payload) => {
       mutation(module.state, payload);
@@ -38,8 +48,9 @@ function registerMutations (store, module) {
   });
 }
 
-function registerActions (store, module) {
+function registerActions (store, module, prefix) {
   forEach(module.actions, (action, key) => {
+    key = prefix + key;
     const entry = store.actions[key] = store.actions[key] || [];
     entry.push((payload) => {
       action(store, payload);
@@ -86,7 +97,9 @@ class Store {
     this.mutations = {};
     this.actions = {};
     this.getters = {};
+    this.root = options;
     installModule(this, this.state, options);
+    console.log(this);
   }
 
   // 属性会被定义在实例的原型上
