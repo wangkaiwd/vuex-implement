@@ -6,5 +6,5 @@
 * `namespaced`
 * `dynamic register`
 * `plugin`
-* `helper`
 * `observe async change`
+* `helper`
