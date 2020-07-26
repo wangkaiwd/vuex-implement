@@ -176,7 +176,6 @@ class Store {
 function enableStrictMode (store) {
   // 这里$watch的第一个参数传入字符串无法生效，需要传入函数
   store._vm.$watch(() => {return store.state;}, () => {
-    console.log('commit', store._committing);
     console.assert(store._committing, 'do not mutate vuex store state outside mutation handlers');
   }, { deep: true, sync: true });
 }
@@ -184,3 +183,10 @@ function enableStrictMode (store) {
 const Vuex = { install, Store };
 
 export default Vuex;
+
+// 检测是否为异步更新的思路：
+//  1. 实时监听数据的变化
+//  2. 在更改数据的函数外再包裹一层函数
+//  3. 包裹函数接受一个函数作为参数
+//  4. 在执行参数函数之前先将boolean值置为true,然后执行函数，执行完成后将boolean置为false
+//  5. 如果更改数据的函数在执行时包含异步任务，那么boolean就会先变为false，此时数据监听函数就会检测到对应的变化，并作出提示
