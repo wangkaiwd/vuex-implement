@@ -51,6 +51,9 @@ function registerMutations (store, module, prefix, path) {
     entry.push((payload) => {
       // 这里module.state在registerState的时候将module.state赋值给this.state, 所以它们指向了同一片堆内存空间
       mutation(module.state, payload);
+      if (store.plugins) { // 每次mutation更新后调用subscribe中传入的函数
+        store.sub({ type: key, payload }, module.state);
+      }
     });
   });
 }
@@ -67,6 +70,7 @@ function registerActions (store, module, prefix) {
 
 function registerGetters (store, module) {
   forEach(module.getters, (getter, key) => {
+    // 源码中的getters方法定义在了computed中
     Object.defineProperty(store.getters, key, {
       get: () => {
         return getter(module.state);
@@ -96,7 +100,7 @@ function registerChildren (store, rootState, module, path) {
 
 class Store {
   constructor (options) {
-    const { state, mutations, actions, getters } = options;
+    const { state, mutations, actions, getters, plugins } = options;
     // 执行Vue.use会执行install方法，会将全局的Vue赋值为Vue实例
     // 保证state具有响应性
     this._vm = new Vue({ // 这里为什么就让state可以在另一个实例中拥有响应性？
@@ -105,7 +109,14 @@ class Store {
     this.mutations = {};
     this.actions = {};
     this.getters = {};
+    this.plugins = plugins;
     this.root = options;
+    this.sub = undefined;
+    if (this.plugins) {
+      this.plugins.forEach(plugin => {
+        plugin(this);
+      });
+    }
     installModule(this, this.state, options);
   }
 
@@ -134,6 +145,10 @@ class Store {
   registerModule (rawModule, path) {
     installModule(this, this.state, rawModule, path);
     console.log(this);
+  }
+
+  subscribe (cb) {
+    this.sub = cb;
   }
 }
 
