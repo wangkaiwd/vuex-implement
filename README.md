@@ -1,4 +1,5 @@
-## 从零到一实现简易`Vuex`
+## `Vuex`源码解析
+在正式阅读`Vuex`源码之前，我们先实现一个简易版的`Vuex`来帮助我们理解
 
 ### `Vuex`使用
 > [`official documentation`](https://vuex.vuejs.org/)
@@ -309,3 +310,5 @@ export default new Vuex.Store({
   // ...
 });
 ```
+到这里我们已经实现了一个简易版的`Vuex`，可以通过`state`来获取数据、通过`mutation`同步更改`state`、通过`action`来处理异步行为。这只是源码的核心逻辑简化，接下来我们深入解读一下`Vuex`源码。
+
