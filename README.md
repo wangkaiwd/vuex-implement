@@ -312,3 +312,49 @@ export default new Vuex.Store({
 ```
 到这里我们已经实现了一个简易版的`Vuex`，可以通过`state`来获取数据、通过`mutation`同步更改`state`、通过`action`来处理异步行为。这只是源码的核心逻辑简化，接下来我们深入解读一下`Vuex`源码。
 
+### `Vuex`源码目录结构
+![](https://raw.githubusercontent.com/wangkaiwd/drawing-bed/master/20200727002457.png)
+> 下面我们只摘出源码中的核心代码进行解读，具体细节需要读者去源码中寻找
+
+### 所有组件都可以访问`$store`
+源码中的`install`方法与我们的实现基本上是相同的，代码如下：
+```javascript
+// store.js
+export function install (_Vue) {
+  Vue = _Vue
+  applyMixin(Vue)
+}
+
+// mixin
+export default function applyMixin (Vue) {
+  Vue.mixin({ beforeCreate: vuexInit })
+  /**
+   * Vuex init hook, injected into each instances init hooks list.
+   */
+  function vuexInit () {
+    const options = this.$options
+    // store injection
+    // 自上而下将根实例中传入的VuexStore实例store注入到所有组件的实例上
+    if (options.store) {
+      this.$store = typeof options.store === 'function'
+        ? options.store()
+        : options.store
+    } else if (options.parent && options.parent.$store) {
+      this.$store = options.parent.$store
+    }
+  }
+}
+```
+
+![](https://raw.githubusercontent.com/wangkaiwd/drawing-bed/master/20200727004339.png)
+子组件在调用`beforeCreate`函数时，都会使用其父组件的`$store`属性作为自己的`$store`属性，而根实例会在实例化时我们手动传入`store`属性。这样实现了每个组件都会拥有`$store`属性
+
+### 依赖收集
+
+### 模块安装
+
+### 动态注册
+
+### 插件机制
+
+### 辅助函数
