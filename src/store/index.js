@@ -19,6 +19,7 @@ function logger (store) {
 
 export default new Vuex.Store({
   plugins: [logger],
+  strict: true,
   state: {
     age: 10,
     person: {
@@ -39,8 +40,13 @@ export default new Vuex.Store({
   },
   mutations: {
     add (state, payload) {
-      state.age = state.age + payload;
+      setTimeout(() => {
+        state.age = state.age + payload;
+      }, 1000);
     },
+    addSync (state, payload) {
+      state.age = state.age + payload;
+    }
   },
   actions: {
     // const { commit } = store;
@@ -50,7 +56,7 @@ export default new Vuex.Store({
     asyncAdd ({ commit }, payload) {
       // 这里调用commit时，如果不提前指定this的话，this会指向undefined
       setTimeout(() => {
-        commit('add', payload);
+        commit('addSync', payload);
       }, 2000);
     }
   },
