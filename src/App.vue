@@ -8,16 +8,23 @@
     <!--    <h4>{{$store.state.a.a2.name}}</h4>-->
     <!--    <button @click="onTestNamespaced">namespaced</button>-->
     <!--    <button @click="changeA2Name">update a2 name</button>-->
+    <h1>{{age}}</h1>
   </div>
 </template>
 
 <script>
+  import { mapState } from './myVuex/helper';
+
   export default {
     name: 'App',
     components: {},
+    computed: {
+      ...mapState(['age'])
+    },
     methods: {
       onAdd () {
-        this.$store.commit('add', 1);
+        // this.$store.commit('add', 1);
+        this.$store.commit('addSync', 1);
       },
       onAsyncAdd () {
         this.$store.dispatch('asyncAdd', 1);
