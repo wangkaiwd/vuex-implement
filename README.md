@@ -580,7 +580,38 @@ store._vm = new Vue({
 ### `Store`提供的`api`
 
 #### `commit`
+```javascript
+commit (_type, _payload, _options) {
+  // check object-style commit
+  const {
+    type,
+    payload,
+    options
+  } = unifyObjectStyle(_type, _payload, _options);
 
+  // 插件调用subscribe方法是回调函数的参数
+  const mutation = { type, payload };
+  const entry = this._mutations[type];
+  if (!entry) {
+    if (__DEV__) {
+      console.error(`[vuex] unknown mutation type: ${type}`);
+    }
+    return;
+  }
+  // 用_withCommit包裹来判断是否同步更改state
+  this._withCommit(() => {
+    // commit时调用mutation,参数为payload
+    entry.forEach(function commitIterator (handler) {
+      handler(payload);
+    });
+  });
+
+  // 调用commit更改state时，调用所有插件中订阅的方法
+  this._subscribers
+    .slice() // shallow copy to prevent iterator invalidation if subscriber synchronously calls unsubscribe
+    .forEach(sub => sub(mutation, this.state));
+}
+```
 #### `dispath`
 
 ### 动态注册
