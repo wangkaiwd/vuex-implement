@@ -409,7 +409,104 @@ export default class ModuleCollection {
 并且每个模块也通过`Module`类提供了一些原型方法方便调用。
 
 ### 模块安装
+通过模块收集将用户传入的选项处理为我们方便使用的树形结构后，需要为`store`实例添加用户要使用的`state, getters, mutations, actions`。
 
+源码中通过`installModule`来递归的生成`store`实例需要的属性：
+```javascript
+export class Store {
+  constructor (options = {}) {
+    // ...
+    // 模块收集
+    this._modules = new ModuleCollection(options);
+    const state = this._modules.root.state;
+
+    // init root module.
+    // this also recursively registers all sub-modules
+    // and collects all module getters inside this._wrappedGetters
+    // 模块安装
+    installModule(this, state, [], this._modules.root);
+  }
+}
+```
+```javascript
+function installModule (store, rootState, path, module, hot) {
+  // 当path为空数组时，遍历的是根模块
+  const isRoot = !path.length;
+  // 根据path获取当前遍历模块的命名空间namespace
+  const namespace = store._modules.getNamespace(path);
+  // register in namespace map
+  if (module.namespaced) {
+    if (store._modulesNamespaceMap[namespace] && __DEV__) {
+      console.error(`[vuex] duplicate namespace ${namespace} for the namespaced module ${path.join('/')}`);
+    }
+    // 在store上存储模块命名空间的映射，key为namespace,value为module
+    // 每个模块都应该有自己单独的命名空间，方便检查命名空间是否重复并提醒用户
+    store._modulesNamespaceMap[namespace] = module;
+  }
+  // set state
+  if (!isRoot && !hot) {
+    // 根据根state以及path找到对应的父state
+    const parentState = getNestedState(rootState, path.slice(0, -1));
+    // path的最后一项为当前处理的模块名
+    const moduleName = path[path.length - 1];
+    store._withCommit(() => {
+      // 保证为state赋值时，值为响应式
+      Vue.set(parentState, moduleName, module.state);
+      // state => this._modules.root.state
+      // store._vm = new Vue({
+      //    data: {
+      //        $$state: state
+      //    }
+      // })
+      // store.state => store._vm._data.$$state
+      // 所以store.state和state即this._modules.root.state指向同一片堆内存空间，堆内存的键值对发生变化时，会同步更新
+    });
+  }
+  // 生成当前模块的state,getters,commit,dispatch
+  // 方便之后在注册mutation,action,getter时使用当前模块的一些属性和方法：
+  // 如在action中可以使用局部的commit,dispatch来调用当前模块的mutation和action
+  const local = module.context = makeLocalContext(store, namespace, path);
+
+  // 为store设置mutations
+  module.forEachMutation((mutation, key) => {
+    const namespacedType = namespace + key;
+    registerMutation(store, namespacedType, mutation, local);
+  });
+
+  module.forEachAction((action, key) => {
+    const type = action.root ? key : namespace + key;
+    const handler = action.handler || action;
+    registerAction(store, type, handler, local);
+  });
+
+  module.forEachGetter((getter, key) => {
+    const namespacedType = namespace + key;
+    registerGetter(store, namespacedType, getter, local);
+  });
+
+  module.forEachChild((child, key) => {
+    installModule(store, rootState, path.concat(key), child, hot);
+  });
+}
+```
+`installModule`方法做了以下事情：
+* 计算当前模块的命名空间
+* 生成`this._module.root.state`并具有响应式
+* 注册`mutations`
+* 注册`actions`
+* 注册`getters`
+* 继续递归注册
+
+在执行完成`installModule`后，`store`的结构如下：
+```javascript
+
+```
+
+### `Store`提供的`api`
+
+#### `commit`
+
+#### `dispath`
 
 ### 动态注册
 

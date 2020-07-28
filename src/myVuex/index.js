@@ -34,6 +34,7 @@ const installModule = (store, rootState, current, path = []) => {
   registerState(rootState, current, path);
   registerMutations(store, current, prefix, path);
   registerActions(store, current, prefix);
+  // getters也会根据命名空间来拼接
   registerGetters(store, current);
   registerChildren(store, rootState, current, path);
 };
@@ -63,6 +64,9 @@ function registerActions (store, module, prefix) {
     key = prefix + key;
     const entry = store.actions[key] = store.actions[key] || [];
     entry.push((payload) => {
+      // 这里的store存在问题，它在执行commit和action时都是全局的
+      // 在源码中，通过makeLocalContext将commit和action中的namespace进行拼接
+      // 如果不需要拼接的话，可以传入第三个参数options: { root: true }
       action(store, payload);
     });
   });
