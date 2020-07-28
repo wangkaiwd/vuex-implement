@@ -497,10 +497,85 @@ function installModule (store, rootState, path, module, hot) {
 * 注册`getters`
 * 继续递归注册
 
-在执行完成`installModule`后，`store`的结构如下：
+在执行完成`installModule`后，`store`大概结构如下：
 ```javascript
-
+const store = {
+  "_mutations": {
+    "cart/pushProductToCart": [
+      function handler() {}
+    ],
+  },
+  "_actions": {
+    "cart/addProductToCart": [
+      function handler() {}
+    ],
+  },
+}
 ```
+需要注意的是，此时并没有将`state`和`getters`关联到`store`中，真正将其关联的方法在`resetStoreVM`中：
+```javascript
+function resetStoreVM (store, state, hot) {
+  // bind store public getters
+  store.getters = {};
+  // reset local getters cache
+  store._makeLocalGettersCache = Object.create(null);
+  const wrappedGetters = store._wrappedGetters;
+  const computed = {};
+  forEachValue(wrappedGetters, (fn, key) => {
+    // use computed to leverage its lazy-caching mechanism
+    // direct inline function use will lead to closure preserving oldVm.
+    // using partial to return function with only arguments preserved in closure environment.
+    // 将getter放到计算属性中
+    computed[key] = partial(fn, store);
+    // store.getters中的属性从store中创建的 vue instance 中获取
+    Object.defineProperty(store.getters, key, {
+      get: () => store._vm[key],
+      enumerable: true // for local getters
+    });
+  });
+
+  // 通过创建Vue实例，然后将store.state定义在Vue的data中，保证state的响应性
+  // 将getters放入到计算属性中，在从getters中取值时会从store._vm中获取
+  store._vm = new Vue({
+    data: {
+      // 以_或者$开头的属性，将不会被代理在Vue实例上，因为它们可能与Vue内部的属性和API方法发生冲突
+      // 您必须像vm.$data._property一样访问它们
+      $$state: state
+    },
+    computed
+  });
+  Vue.config.silent = silent;
+
+  // enable strict mode for new vm
+  if (store.strict) {
+    // 启用严格模式，当通过mutation异步更改state时会报错
+    enableStrictMode(store);
+  }
+}
+```
+在`store`中我们使用`get`语法来定义`state`: 
+```javascript
+class Store {
+  // ...
+  get state () {
+    return this._vm._data.$$state;
+  }
+  // ...
+}
+```
+```javascript
+const state = this._modules.root.state;
+
+store._vm = new Vue({
+  data: {
+    // 以_或者$开头的属性，将不会被代理在Vue实例上，因为它们可能与Vue内部的属性和API方法发生冲突
+    // 您必须像vm.$data._property一样访问它们
+    $$state: state
+  },
+  computed
+});
+```
+这样我们获取`store.state`的值时，相当于从`this._modules.root.state`中获取值，通过`Vue`当中间层，实现了`state`的响应式，保证数据和视图的同步更新
 
 ### `Store`提供的`api`
 
