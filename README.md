@@ -411,6 +411,10 @@ export default class ModuleCollection {
 ### 模块安装
 通过模块收集将用户传入的选项处理为我们方便使用的树形结构后，需要为`store`实例添加用户要使用的`state, getters, mutations, actions`。
 
+首先我们通过下图大概看一下`Vuex`整个安装模块的具体流程
+![](https://raw.githubusercontent.com/wangkaiwd/drawing-bed/master/2020-7-29-1%3A02.png)
+
+
 源码中通过`installModule`来递归的生成`store`实例需要的属性：
 ```javascript
 export class Store {
