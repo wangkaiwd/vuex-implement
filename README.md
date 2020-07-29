@@ -581,9 +581,11 @@ store._vm = new Vue({
 ```
 这样我们获取`store.state`的值时，相当于从`this._modules.root.state`中获取值，通过`Vue`当中间层，实现了`state`的响应式，保证数据和视图的同步更新
 
-### `Store`提供的`api`
-
+### `Store`提供的方法
+`Store`中提供的最常用的方法是`commit`和`dispatch`，分别用来提交`mutation`和派发`action`。它们与`state`和组件之间的关系如下：
+![](https://raw.githubusercontent.com/wangkaiwd/drawing-bed/master/202444400729213954.png)
 #### `commit`
+`commit`方法的主要逻辑是根据传入的`type`来执行对应的所有`mutations`中的用户传入的函数
 ```javascript
 commit (_type, _payload, _options) {
   // check object-style commit
@@ -616,7 +618,37 @@ commit (_type, _payload, _options) {
     .forEach(sub => sub(mutation, this.state));
 }
 ```
-#### `dispath`
+上述代码中，我们看到`Vuex`并没有直接执行`mutations`中的函数，而是通过将执行过程放入函数中，并作为参数传到了`_withCommit`方法中。下面我们看看`_withCommit`方法做了些什么
+```javascript
+class Store {
+  construtor() {
+    // ... some code
+    this._committing = false;
+  }
+
+  _withCommit (fn) {
+    const committing = this._committing;
+    this._committing = true;
+    fn();
+    this._committing = committing;
+  }
+}
+
+// 启用严格模式
+function enableStrictMode (store) {
+  // 该操作是十分昂贵的，所以需要在生产环境禁用
+  // 同步深度监听store中state的变化，当state改变没有通过mutation时，会抛出异常
+  store._vm.$watch(function () { return this._data.$$state; }, () => {
+    if (__DEV__) {
+      assert(store._committing, `do not mutate vuex store state outside mutation handlers.`);
+    }
+  }, { deep: true, sync: true });
+}
+```
+在开启严格模式后，`store`将会利用`Vue`提供的`$watch`方法深度同步监听`this._data.$$state`的变化，也就是在`store`的`state`发生变化时立即触发第二参数回调函数。
+
+如果`mutations`会异步更改`state`,那么在异步更改`state`之前会先执行`this._committing = false`。此时`assert(store.__committing)`会由于断言失败，进行提示。当`mutations`同步更改`state`时，在`state`更改完成后，才会将`this._committing`更改为`false`，`assert(store._committing)`会一直断言成功，不会进行提示。
+#### `dispatch`
 
 ### 动态注册
 
