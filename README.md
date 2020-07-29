@@ -754,5 +754,94 @@ registerModule (path, rawModule, options = {}) {
 此时，将会成功的为`store`重新注册一个新的模块，用户可以成功的访问它的`state`，并调用`commit`和`dispatch`方法来触发`mutation`和`action`
 
 ### 插件机制
+`Vuex`中的插件会作为函数传入到`plugins`选项中: 
+```javascript
+const myPlugin = store => {
+  // 在store被初始化的时候被调用
+  store.subscribe((mutation, state) => {
+    // 在每次执行mutation之后调用
+    // mutation的格式为 `{ type, payload }`.
+  })
+}
+
+const store = new Vuex.Store({
+  // ...
+  plugins: [myPlugin]
+})
+```
+`plugins`值为数组，而数组中的每一项即为`Vuex`的插件。其本质上就是一个函数，只不过函数会接受一个参数，该参数为`store`的实例，插件的编写者可以调用`store`中的方法和属性。
+
+下面我们通过编写一个简化版的`logger`插件来学习源码：
+```javascript
+function logger (store) {
+  let prevState = JSON.parse(JSON.stringify(store.state));
+  // 每次修改state时分别打印之前记录前一次和下一次的state
+  store.subscribe((mutation, state) => {
+    console.log('prevState', prevState);
+    const nextState = JSON.parse(JSON.stringify(state));
+    console.log('nextState', nextState);
+    prevState = nextState;
+  });
+}
+
+const store = new Vuex.Store({
+  // ...
+  plugins: [logger]
+})
+```
+
+我们整理一下源码中有关插件的代码：
+```javascript
+class Store {
+  constructor(options) {
+    const {
+      plugins = [], // 配置项中的插件选项，默认值为空对象
+      strict = false
+    } = options;
+    
+    this._subscribers = [];
+    // 依次执行插件数组中的每个函数，参数为Store实例this，可以调用store的属性和方法
+    plugins.forEach(plugin => plugin(this));
+  }
+
+  subscribe (fn, options) {
+    return genericSubscribe(fn, this._subscribers, options);
+  }  
+  
+  commit (_type, _payload, _options) {
+    // some code ...
+    // 调用commit更改state时，调用所有插件中订阅的方法
+    this._subscribers
+      .slice() // shallow copy to prevent iterator invalidation if subscriber synchronously calls unsubscribe
+      .forEach(sub => sub(mutation, this.state));
+    // some code ...
+  }
+}
+
+function genericSubscribe (fn, subs, options) {
+  // 如果fn在subs中不存在，options中传入{ prepend: true }会将fn放到fn的第一项
+  // 否则会将fn放入到subs中的最后一项
+  if (subs.indexOf(fn) < 0) {
+    options && options.prepend
+      ? subs.unshift(fn)
+      : subs.push(fn);
+  }
+  // 会返回取消订阅(unsubscribe)函数，将fn从subs中删除，这样在调用mutation的时候就不会触发fn
+  return () => {
+    const i = subs.indexOf(fn);
+    if (i > -1) {
+      subs.splice(i, 1);
+    }
+  };
+}
+```
+在`store`的`constructor`中，会执行`plugins`中传入的每一个函数，并将`store`实例作为参数传入。
+
+在插件中调用`store.subscribe(fn)`会为`_subscribers`数组添加`fn`到最后一项，并返回一个取消订阅函数，执行后会将`fn`从`_subscribers`中删除。
+
+之后在调用`store`的`commit`方法时，会执行`_subscribers`数组中的所有方法，并传入参数`mutation`以及`store.state`，这样用户可以通过`mutation`拿到当前`{ type , payload }`以及调用`commit`方法更新后的`store.state`
+
+到这里我们便实现了一个简单的`logger`插件，并且结合插件的具体实现理解了`plugins`相关的源码。
 
 ### 辅助函数
+
