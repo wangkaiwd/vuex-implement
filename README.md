@@ -351,7 +351,7 @@ export default function applyMixin (Vue) {
 子组件在调用`beforeCreate`函数时，都会使用其父组件的`$store`属性作为自己的`$store`属性，而根实例会在实例化时我们手动传入`store`属性。这样实现了每个组件都会拥有`$store`属性
 
 ### 依赖收集
-在`Vuex`中可以将`state,actions,mutatoins`等属性根据模块进行划分，方便代码的维护。
+在`Vuex`中可以将`state,actions,mutatoins`等属性根据模块`modules`进行划分，方便代码的维护。当然这会生成一个递归的树形结构对象，下面我们看看`Vuex`如何优雅的处理递归树形结构数据。
 
 在`Store`拿到了用户传入的配置项之后，首先进行的操作是模块收集，其目的是将用户的传入的配置项处理为更加方便的树形结构
 
@@ -649,6 +649,83 @@ function enableStrictMode (store) {
 
 如果`mutations`会异步更改`state`,那么在异步更改`state`之前会先执行`this._committing = false`。此时`assert(store.__committing)`会由于断言失败，进行提示。当`mutations`同步更改`state`时，在`state`更改完成后，才会将`this._committing`更改为`false`，`assert(store._committing)`会一直断言成功，不会进行提示。
 #### `dispatch`
+`Vuex`中通过`Promise`来处理异步的`action`。在注册`action`的时候，会将`action`的返回值强行转换为`Promise`实例，方便在`dispatch`时处理。
+```javascript
+// 在注册action时，会将action的返回值通过Promise.resolve(res)处理成promise,并返回
+function registerAction (store, type, handler, local) {
+  const entry = store._actions[type] || (store._actions[type] = []);
+  entry.push(function wrappedActionHandler (payload) {
+    let res = handler.call(store, {
+      // 当前模块的dispatch,会帮用户拼接命名空间。当传入第三个参数 { root: true }，调用全局的dispatch
+      dispatch: local.dispatch,
+      // 当前模块的commit, 会帮用户拼接命名空间
+      commit: local.commit,
+      // 当前模块的getters, 会从命名空间中将当前的getter进行分离
+      getters: local.getters,
+      // 通过path获取到当前模块的state
+      state: local.state,
+      // 全局的getters
+      rootGetters: store.getters,
+      // 全局的state
+      rootState: store.state
+    }, payload);
+    if (!isPromise(res)) {
+      // 返回值不是Promise的话通过Promise.resolve转换为Promise
+      res = Promise.resolve(res);
+    }
+    if (store._devtoolHook) {
+      return res.catch(err => {
+        store._devtoolHook.emit('vuex:error', err);
+        throw err;
+      });
+    } else {
+      return res;
+    }
+  });
+}
+```
+`dispatch`的主要思路是执行所有的异步`action`，这里的异步`action`表示的是返回值为`Promise`实例的函数：
+* `Promise.all`处理同一`type`的多个`action`(没有设置命名空间)
+* 同一个`type`只有一个`action`，直接获取`action`执行后的`Promise`实例
+`action`执行后返回的`Promise`实例的`value`与`reason`
+
+`dispatch`会返回一个新的`Promise`实例，该`Promise`实例拥有与`action`执行后返回的`Promise`实例相同的解决时`value`和拒绝时的`reason`
+```javascript
+dispatch (_type, _payload) {
+  // check object-style dispatch
+  const {
+    type,
+    payload
+  } = unifyObjectStyle(_type, _payload);
+
+  const action = { type, payload };
+  const entry = this._actions[type];
+  // 执行所有的actions，actions中的函数会被处理成返回Promise,当同一type有多个action时，通过Promise.all进行处理
+  // 最终得到的result也是promise
+
+  const result = entry.length > 1
+    ? Promise.all(entry.map(handler => handler(payload)))
+    : entry[0](payload);
+
+  // 如果不用处理额外逻辑的话，可以直接将promise进行返回
+  // return result;
+  // 返回一个新的Promise,该Promise的value是result的value，该Promise失败的reason是result失败的reason
+  return new Promise((resolve, reject) => {
+    result.then(res => {
+      // do something ...
+      resolve(res);
+    }, error => {
+      // do something ...
+      reject(error);
+    });
+  });
+}
+```
+由于`dispatch`返回了一个`Promise`实例，所以我们可以通过调用它的`.then`方法来保证在异步逻辑处理完成后做一些事情：
+```javascript
+store.dispatch('type',payload)
+.then(() => { // do someting on success},() => { // do something on failure})
+```
 
 ### 动态注册
 
