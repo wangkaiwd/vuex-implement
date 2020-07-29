@@ -1,4 +1,6 @@
 ## `Vuex`源码解析
+> 为方便理解，本文中提及的`store`为`Store`的实例，`promise`为`Promise`的实例
+
 在正式阅读`Vuex`源码之前，我们先实现一个简易版的`Vuex`来帮助我们理解
 
 ### `Vuex`使用
@@ -727,7 +729,29 @@ store.dispatch('type',payload)
 .then(() => { // do someting on success},() => { // do something on failure})
 ```
 
-### 动态注册
+### 动态注册模块
+在`Store`被实例化之后，我们还可以通过`registerModule`来动态的为`Store`添加模块：
+```javascript
+registerModule (path, rawModule, options = {}) {
+  // path为字符串时将其处理为数组
+  if (typeof path === 'string') path = [path];
+
+  // 进行模块收集，根据path以及用户传入的选项
+  // 根据path将其放到this._modules.root上
+  this._modules.register(path, rawModule);
+  // 将新加到this._modules.root上的模块通过path安装到store上
+  installModule(this, this.state, path, this._modules.get(path), options.preserveState);
+  // reset store to update getters...
+  // 为store添加新注册的getters
+  resetStoreVM(this, this.state);
+}
+```
+模块动态注册与`store`首次处理用户传入的配置项的逻辑完全相同，只不过此时要指定的`path`：
+* 通过`this._modules.register`进行模块收集，转换树形结构
+* 将树形结构内容安装到`store`中
+* 通过`resetStoreVM`将所有`store.getters`重新定义到`Vue`实例的`computed`属性中
+
+此时，将会成功的为`store`重新注册一个新的模块，用户可以成功的访问它的`state`，并调用`commit`和`dispatch`方法来触发`mutation`和`action`
 
 ### 插件机制
 
