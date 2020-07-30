@@ -844,4 +844,118 @@ function genericSubscribe (fn, subs, options) {
 到这里我们便实现了一个简单的`logger`插件，并且结合插件的具体实现理解了`plugins`相关的源码。
 
 ### 辅助函数
+由于通过`$store`属性获取`state`以及调用`mutation`和`action`的代码比较冗余，`Vuex`为了简化用户在组件中使用，提供了一系列的辅助函数来帮我们少些一些代码：
+```javascript
+// 从`vuex`中中引入
+import { mapState } from 'vuex'
 
+export default {
+  // ...
+  computed: mapState({
+    // arrow functions can make the code very succinct!
+    count: state => state.count,
+
+    // 与`state => state.count`的写法作用相同
+    countAlias: 'count',
+
+    // to access local state with `this`, a normal function must be used
+    countPlusLocalState (state) {
+      return state.count + this.localCount
+    }
+  }),
+  mounted() {
+    // 使用store中的state
+    console.log(this.count);
+    console.log(this.countPlusLocalState);
+  }
+}
+```
+这里以`mapState`为例，来看下`Vuex`中辅助函数的源码实现：
+```javascript
+// 处理命名空间namespace和map的一些可能情况，并且在处理之后将namespace和map传递给回调函数fn
+function normalizeNamespace (fn) {
+  return (namespace, map) => {
+    // 命名空间是选传的，如果命名空间不是字符串，那么说明只传了一个参数，将变量往后移，并且命名空间为''
+    if (typeof namespace !== 'string') {
+      map = namespace;
+      namespace = '';
+    } else if (namespace.charAt(namespace.length - 1) !== '/') {
+      // 传入的命名空间如果没有/，帮用户补全
+      namespace += '/';
+    }
+    // fn会通过命名空间以及map会返回一个对象，对象大概像这样：
+    // res = {
+    //   age() {
+    //     // 当前命名空间的state中的age
+    //     return state.age
+    //   }
+    // }
+    return fn(namespace, map);
+  };
+}
+
+// 将用户传入的map统一处理为[{key,val}]的格式
+function normalizeMap (map) {
+  // 不是数组或对象的话返回空数组
+  if (!isValidMap(map)) {
+    return [];
+  }
+  // 将数组会对象同意转换为数组
+  // 数组： ['name','age'] => [{key:'name', val: 'name'}, {key:'age', val: 'age'}]
+  // 对象： {a: 'name', b: 'age'} => [{key: 'a', val: 'name'}]
+  return Array.isArray(map)
+    ? map.map(key => ({ key, val: key }))
+    : Object.keys(map).map(key => ({ key, val: map[key] }));
+}
+
+export const mapState = normalizeNamespace((namespace, states) => {
+  const res = {};
+  // [{key:'name', val: 'name'}, {key:'age', val: 'age'}]
+  normalizeMap(states).forEach(({ key, val }) => {
+    res[key] = function mappedState () {
+      let state = this.$store.state;
+      let getters = this.$store.getters;
+      if (namespace) { // 如果传入了命名空间
+        const module = getModuleByNamespace(this.$store, 'mapState', namespace);
+        if (!module) {
+          return;
+        }
+        // 当前命名空间模块的state
+        state = module.context.state;
+        // 当前命名空间模块的getters
+        getters = module.context.getters;
+      }
+      return typeof val === 'function'
+        ? val.call(this, state, getters)
+        : state[val];
+    };
+  });
+  // res = {
+  //   age() {
+  //     // 当前命名空间的state中的age
+  //     return state.age
+  //   }
+  // }
+  return res;
+});
+```
+`mapState`的核心逻辑如下：
+* 处理用户传入的`namespace`和`map`，为`namespace`补充`/`，以及处理没有传入`namespace`的情况
+* 通过序列化后的`namespace`将`map`组合成`Vue`中计算属性支持的对象格式
+* 将处理好的对象返回
+
+我们可以将代码简化一下，使用伪代码来看一下`mapState`的实际流程：
+```javascript
+function mapState(namesapce,map) {
+  // 处理命名空间，并将map转换为Vue中computed支持的对象格式
+  // ...
+  return {
+    age() {
+      // 通过命名空间获取到对应模块的state,然后取到map中的属性返回
+      // ...
+      return state.age
+    } 
+  }
+}
+mapState(['a','b'], ['age'])
+```
