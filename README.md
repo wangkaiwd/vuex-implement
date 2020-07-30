@@ -908,6 +908,33 @@ function normalizeMap (map) {
     : Object.keys(map).map(key => ({ key, val: map[key] }));
 }
 
+function getModuleByNamespace (store, helper, namespace) {
+  // 在安装模块的时候将命名空间与模块进行了映射，在这里可以通过命名空间获取到模块
+  const module = store._modulesNamespaceMap[namespace];
+  return module;
+}
+function installModule (store, rootState, path, module, hot) {
+  // some code ...
+  // 根据path获取当前遍历模块的命名空间namespace
+  const namespace = store._modules.getNamespace(path);
+
+  // register in namespace map
+  if (module.namespaced) {
+    if (store._modulesNamespaceMap[namespace] && __DEV__) {
+      console.error(`[vuex] duplicate namespace ${namespace} for the namespaced module ${path.join('/')}`);
+    }
+    // 在store上存储模块命名空间的映射，key为namespace,value为module
+    // 每个模块都应该有自己单独的命名空间，方便检查命名空间是否重复并提醒用户
+    // 也方便之后在辅助函数中通过命名空间来获取到其对应的模块
+    store._modulesNamespaceMap[namespace] = module;
+  }
+
+  // 为module.context赋值，方便之后在辅助函数中从module通过context来获取当前模块的state,getters,dispatch,action
+  const local = module.context = makeLocalContext(store, namespace, path);
+  // some code ...
+}
+
+
 export const mapState = normalizeNamespace((namespace, states) => {
   const res = {};
   // [{key:'name', val: 'name'}, {key:'age', val: 'age'}]
