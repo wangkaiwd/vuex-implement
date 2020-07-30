@@ -414,7 +414,7 @@ export default class ModuleCollection {
   }
 }
 ```
-到这里我们将配置项处理为了比较方便的结构,并且每个模块也通过`Module`类提供了一些原型方法方便调用。：
+到这里我们将配置项处理为了比较方便的结构,并且每个模块也通过`Module`类提供了一些原型方法方便直接调用：
 ```javascript
 { root: 
   { 
@@ -602,13 +602,13 @@ store._vm = new Vue({
   computed
 });
 ```
-这样我们获取`store.state`的值时，相当于从`this._modules.root.state`中获取值，通过`Vue`当中间层，实现了`state`的响应式，保证数据和视图的同步更新
+这样我们获取`store.state`的值时，相当于从`this._modules.root.state`中获取值，通过`Vue`当中间层，实现了`state`的响应性，保证数据和视图的同步更新。
 
 ### `Store`提供的方法
 `Store`中提供的最常用的方法是`commit`和`dispatch`，分别用来提交`mutation`和派发`action`。它们与`state`和组件之间的关系如下：
 ![](https://raw.githubusercontent.com/wangkaiwd/drawing-bed/master/202444400729213954.png)
 #### `commit`
-`commit`方法的主要逻辑是根据传入的`type`来执行对应的所有`mutations`中的用户传入的函数
+`commit`方法的主要逻辑是根据传入的`type`来执行对应的所有`mutations`中用户传入的函数
 ```javascript
 commit (_type, _payload, _options) {
   // check object-style commit
@@ -668,9 +668,12 @@ function enableStrictMode (store) {
   }, { deep: true, sync: true });
 }
 ```
-在开启严格模式后，`store`将会利用`Vue`提供的`$watch`方法深度同步监听`this._data.$$state`的变化，也就是在`store`的`state`发生变化时立即触发第二参数回调函数。
+在开启严格模式后，`store`将会利用`Vue`提供的`$watch`方法深度同步监听`this._data.$$state`的变化，也就是在`store`的`state`发生变化时立即触发第二个参数对应的回调函数。
 
 如果`mutations`会异步更改`state`,那么在异步更改`state`之前会先执行`this._committing = false`。此时`assert(store.__committing)`会由于断言失败，进行提示。当`mutations`同步更改`state`时，在`state`更改完成后，才会将`this._committing`更改为`false`，`assert(store._committing)`会一直断言成功，不会进行提示。
+
+**这样在用户通过`mutation`异步更改`state`就会在控制台报错。**
+
 #### `dispatch`
 `Vuex`中通过`Promise`来处理异步的`action`。在注册`action`的时候，会将`action`的返回值强行转换为`Promise`实例，方便在`dispatch`时处理。
 ```javascript
@@ -707,12 +710,11 @@ function registerAction (store, type, handler, local) {
   });
 }
 ```
-`dispatch`的主要思路是执行所有的异步`action`，这里的异步`action`表示的是返回值为`Promise`实例的函数：
+`dispatch`的主要思路是执行所有的异步`action`（这里的异步`action`表示的是返回值为`Promise`实例的函数）：
 * `Promise.all`处理同一`type`的多个`action`(没有设置命名空间)
 * 同一个`type`只有一个`action`，直接获取`action`执行后的`Promise`实例
-`action`执行后返回的`Promise`实例的`value`与`reason`
 
-`dispatch`会返回一个新的`Promise`实例，该`Promise`实例拥有与`action`执行后返回的`Promise`实例相同的解决时`value`和拒绝时的`reason`
+`dispatch`会返回一个新的`Promise`实例，该`Promise`实例拥有与`action`执行后返回的`Promise`实例相同的被解决的值`value`和被拒绝的原因`reason`
 ```javascript
 dispatch (_type, _payload) {
   // check object-style dispatch
@@ -723,7 +725,7 @@ dispatch (_type, _payload) {
 
   const action = { type, payload };
   const entry = this._actions[type];
-  // 执行所有的actions，actions中的函数会被处理成返回Promise,当同一type有多个action时，通过Promise.all进行处理
+  // 执行所有的actions，actions中的函数会被处理成romise返回,当同一type有多个action时，通过Promise.all进行处理
   // 最终得到的result也是promise
 
   const result = entry.length > 1
@@ -732,7 +734,7 @@ dispatch (_type, _payload) {
 
   // 如果不用处理额外逻辑的话，可以直接将promise进行返回
   // return result;
-  // 返回一个新的Promise,该Promise的value是result的value，该Promise失败的reason是result失败的reason
+  // 返回一个新的Promise,该Promise被解决的value是result的value，该Promise被拒绝的reason是result失败的reason
   return new Promise((resolve, reject) => {
     result.then(res => {
       // do something ...
@@ -744,7 +746,7 @@ dispatch (_type, _payload) {
   });
 }
 ```
-由于`dispatch`返回了一个`Promise`实例，所以我们可以通过调用它的`.then`方法来保证在异步逻辑处理完成后做一些事情：
+由于`dispatch`返回了一个`Promise`实例，所以我们可以通过调用它的`.then`方法来保证在`dispatch`派发的`action`的异步逻辑完成后做一些事情：
 ```javascript
 store.dispatch('type',payload)
 .then(() => { // do someting on success},() => { // do something on failure})
