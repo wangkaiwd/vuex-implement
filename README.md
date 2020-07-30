@@ -360,12 +360,12 @@ export default function applyMixin (Vue) {
 
 ![](https://raw.githubusercontent.com/wangkaiwd/drawing-bed/master/20200727004339.png)
 
-子组件在调用`beforeCreate`函数时，都会使用其父组件的`$store`属性作为自己的`$store`属性，而根实例会在实例化时我们手动传入`store`属性。这样实现了每个组件都会拥有`$store`属性
+子组件在调用`beforeCreate`函数时，都会使用其父组件的`$store`属性作为自己的`$store`属性，而根实例会在实例化时我们手动传入`store`属性。这样使每个组件都拥有了`$store`属性
 
 ### 依赖收集
 在`Vuex`中可以将`state,actions,mutatoins`等属性根据模块`modules`进行划分，方便代码的维护。当然这会生成一个递归的树形结构对象，下面我们看看`Vuex`如何优雅的处理递归树形结构数据。
 
-在`Store`拿到了用户传入的配置项之后，首先进行的操作是模块收集，其目的是将用户的传入的配置项处理为更加方便的树形结构
+在`Store`拿到了用户传入的配置项之后，首先进行的操作是模块收集，其目的是将用户传入的配置项处理为更加方便的树形结构
 
 用户传入：
 ![](https://raw.githubusercontent.com/wangkaiwd/drawing-bed/master/202007222227011451.png)
@@ -414,11 +414,22 @@ export default class ModuleCollection {
   }
 }
 ```
-到这里我们将配置项处理为了比较方便的结构：
+到这里我们将配置项处理为了比较方便的结构,并且每个模块也通过`Module`类提供了一些原型方法方便调用。：
 ```javascript
-{ root: {state: {},_children:{}, _rawModule: {}} }
+{ root: 
+  { 
+    state: {},
+    _children:{}, 
+    _rawModule: {},
+    __proto__: {
+      addChild: f,
+      forEachMutation: f,
+      forEachAction: f,
+      ...
+    } 
+  }, 
+}
 ```
-并且每个模块也通过`Module`类提供了一些原型方法方便调用。
 
 ### 模块安装
 通过模块收集将用户传入的选项处理为我们方便使用的树形结构后，需要为`store`实例添加用户要使用的`state, getters, mutations, actions`。
