@@ -91,20 +91,19 @@ const install = (Vue) => {
   });
 };
 ```
-
-### 响应式的`state`
 这样我们便能在所有的注入`store`配置的根组件及其所有子组件中使用`$store`
 
-**直接为`Vue`的实例添加属性，该属性值是不具备响应性的。**
+### 响应式的`state`
+需要注意的是: **直接为`Vue`的实例添加属性，该属性是不具备[响应性](https://vuejs.org/v2/guide/reactivity.html) 的。**
 
-此时`state`虽然可以获取到，但是由于并没有提前在`data`中定义，所以并不是响应式的，即在`state`发生变化时，视图并不会随之更新。为了让`state`成为响应式，我们在`Vuex`内部创建了一个新的`Vue`实例，并将`state`作为实例的`data`中的属性，保持其响应性
+此时`state`虽然可以获取到，但是由于并没有提前在`data`中定义，所以并不是响应式的，即在`state`发生变化时，视图并不会随之更新。为了让`state`具有响应式，我们在`Vuex`内部创建了一个新的`Vue`实例，并将`state`作为实例的`data`中的属性，保持其响应性
 ```javascript
 class Store {
   constructor (options) {
     const { state} = options;
     // 执行Vue.use会执行install方法，会将全局的Vue赋值为Vue实例
     // 保证state具有响应性
-    this._vm = new Vue({ // 这里为什么就让state可以在另一个实例中拥有响应性？
+    this._vm = new Vue({
       data: { state }
     });
   }
