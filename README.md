@@ -121,7 +121,7 @@ class Store {
 ### `mutation`同步更改`state`
 接下来我们尝试更改`store.state.age`的值。
 
-在`Vuex`中，我们不能直接修改`store.state`的值，而是必须要通过`commit`一个`mutation`，然后通过`mutation`来修改`state`。用法如下：
+在`Vuex`中，我们不能直接修改`store.state`的值，而是必须要`commit`一个`mutation`，然后通过`mutation`来修改`state`。用法如下：
 ```vue
 <template>
   <div id="app">
@@ -172,7 +172,7 @@ class Store {
     const { state, mutations } = options;
     // 执行Vue.use会执行install方法，会将全局的Vue赋值为Vue实例
     // 保证state具有响应性
-    this._vm = new Vue({ // 这里为什么就让state可以在另一个实例中拥有响应性？
+    this._vm = new Vue({
       data: { state }
     });
     this.mutations = {};
@@ -203,7 +203,7 @@ class Store {
 }
 ```
 ### `action`处理异步任务
-在`Vuex`中，异步更新`state`需要通过`dispatch`方法派发一个`action`，然后通过`action`通过`commit`来修改`state`：
+在`Vuex`中，异步更新`state`需要通过`dispatch`方法派发一个`action`，然后通过`action`执行`commit`来修改`state`：
 ```vue
 <template>
   <div id="app">
@@ -317,7 +317,12 @@ export default new Vuex.Store({
   // ...
 });
 ```
-到这里我们已经实现了一个简易版的`Vuex`，可以通过`state`来获取数据、通过`mutation`同步更改`state`、通过`action`来处理异步行为。这只是源码的核心逻辑简化，接下来我们深入解读一下`Vuex`源码。
+到这里我们已经实现了一个简易版的`Vuex`
+* 通过`state`来获取数据
+* 通过`mutation`同步更改`state`
+* 通过`action`来处理异步行为。
+
+目前的代码只是源码的核心逻辑简化，接下来我们深入解读一下`Vuex`源码。
 
 ### `Vuex`源码目录结构
 ![](https://raw.githubusercontent.com/wangkaiwd/drawing-bed/master/20200727002457.png)
