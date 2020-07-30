@@ -1,8 +1,14 @@
 ## `Vuex`源码解析
 > 为方便理解，本文中提及的`store`为`Store`的实例，`promise`为`Promise`的实例
 
+源码的大致实现流程如下图：
+![](https://raw.githubusercontent.com/wangkaiwd/drawing-bed/master/Vuex%20(1).png)
+
 在正式阅读`Vuex`源码之前，我们先实现一个简易版的`Vuex`来帮助我们理解
 
+> 本文源代码：
+> * [简易版`Vuex`](https://github.com/wangkaiwd/vuex-implement/blob/master/src/myVuex/index.js)
+> * [注释版`Vuex`源码](https://github.com/wangkaiwd/vuex-source-study)
 ### `Vuex`使用
 > [`official documentation`](https://vuex.vuejs.org/)
 
