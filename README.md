@@ -317,10 +317,31 @@ export default new Vuex.Store({
   // ...
 });
 ```
+`getters`的实现如下:
+```javascript
+class Store {
+  constructor() {
+    // do something ...
+    this.getters = {};
+    forEach(getters, (getter, key) => {
+      // 每次取值时都会调用get方法
+      // 而computed方法只会在
+      Object.defineProperty(this.getters, key, {
+        get: () => {
+          return getter(this.state);
+        }
+      });
+    });
+    // do something ...  
+  }
+}
+```
+
 到这里我们已经实现了一个简易版的`Vuex`
 * 通过`state`来获取数据
 * 通过`mutation`同步更改`state`
-* 通过`action`来处理异步行为。
+* 通过`action`来处理异步行为
+* 通过`getter`来简化`state`的获取过程
 
 目前的代码只是源码的核心逻辑简化，接下来我们深入解读一下`Vuex`源码。
 
@@ -769,7 +790,7 @@ registerModule (path, rawModule, options = {}) {
   resetStoreVM(this, this.state);
 }
 ```
-模块动态注册与`store`首次处理用户传入的配置项的逻辑完全相同，只不过此时要指定的`path`：
+模块动态注册与`store`首次处理用户传入的配置项的逻辑完全相同，只不过此时要指定`path`：
 * 通过`this._modules.register`进行模块收集，转换树形结构
 * 将树形结构内容安装到`store`中
 * 通过`resetStoreVM`将所有`store.getters`重新定义到`Vue`实例的`computed`属性中
@@ -792,9 +813,9 @@ const store = new Vuex.Store({
   plugins: [myPlugin]
 })
 ```
-`plugins`值为数组，而数组中的每一项即为`Vuex`的插件。其本质上就是一个函数，只不过函数会接受一个参数，该参数为`store`的实例，插件的编写者可以调用`store`中的方法和属性。
+`plugins`值为数组，而数组中的每一项即为`Vuex`的插件。其本质上就是一个函数，只不过函数会接受一个参数，该参数为`Store`的实例，插件的编写者可以调用实例中的方法和属性。
 
-下面我们通过编写一个简化版的`logger`插件来学习源码：
+下面我们通过编写一个简化版的`logger`插件来学习`plugins`的相关源码：
 ```javascript
 function logger (store) {
   let prevState = JSON.parse(JSON.stringify(store.state));
@@ -842,7 +863,7 @@ class Store {
 }
 
 function genericSubscribe (fn, subs, options) {
-  // 如果fn在subs中不存在，options中传入{ prepend: true }会将fn放到fn的第一项
+  // 如果fn在subs中不存在，options中传入{ prepend: true }会将fn放到subs的第一项
   // 否则会将fn放入到subs中的最后一项
   if (subs.indexOf(fn) < 0) {
     options && options.prepend
@@ -867,9 +888,9 @@ function genericSubscribe (fn, subs, options) {
 到这里我们便实现了一个简单的`logger`插件，并且结合插件的具体实现理解了`plugins`相关的源码。
 
 ### 辅助函数
-由于通过`$store`属性获取`state`以及调用`mutation`和`action`的代码比较冗余，`Vuex`为了简化用户在组件中使用，提供了一系列的辅助函数来帮我们少些一些代码：
+由于通过`$store`属性获取`state`以及调用`mutation`和`action`的代码比较冗余，`Vuex`为了简化用户在组件中使用`state,getters,dispatch,commit`，提供了一系列的辅助函数来帮我们少写一些代码：
 ```javascript
-// 从`vuex`中中引入
+// 从`vuex`中引入
 import { mapState } from 'vuex'
 
 export default {
@@ -923,7 +944,7 @@ function normalizeMap (map) {
   if (!isValidMap(map)) {
     return [];
   }
-  // 将数组会对象同意转换为数组
+  // 将数组和对象统一转换为数组
   // 数组： ['name','age'] => [{key:'name', val: 'name'}, {key:'age', val: 'age'}]
   // 对象： {a: 'name', b: 'age'} => [{key: 'a', val: 'name'}]
   return Array.isArray(map)
